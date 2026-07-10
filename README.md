@@ -86,7 +86,9 @@ Install Dependencies - pip install -r requirements.txt
 Step 2 -
 
 Run the Backend - uvicorn app.main:app --reload
+
 Access the Application - http://127.0.0.1:8000
+
 Swagger Documentation - http://127.0.0.1:8000/docs
 
 
