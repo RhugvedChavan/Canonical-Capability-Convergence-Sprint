@@ -1,0 +1,142 @@
+{
+  "$schema": "https://bhiv.internal/schemas/capability-manifest.v1.json",
+  "module_identifier": "bhiv.capability.composition-workspace",
+  "capability_name": "Composition Workspace & Coordination Console",
+  "capability_version": "2.1.0",
+  "manifest_version": "1.0.0",
+  "summary": "A writing/document workspace with version history and comments, paired with a coordination console for task assignment and cross-document status tracking.",
+
+  "capability_metadata": {
+    "owner_team": "capability-owner:composition-workspace",
+    "tags": ["document-editing", "task-coordination", "workspace", "bhiv-capability"],
+    "created_at": "2026-06-01",
+    "documentation": ["README.md", "ARCHITECTURE.md", "INTEGRATION_GUIDE.md", "CHANGELOG.md"]
+  },
+
+  "authority_boundary": {
+    "owns": [
+      "document", "document_version", "comment", "task", "activity_log"
+    ],
+    "reads_but_does_not_own": [
+      "user identity (delegated to host platform's identity provider via UserRef contract)"
+    ],
+    "will_not": [
+      "perform authentication or authorization decisions on behalf of the host",
+      "make network calls to other BHIV services without going through its adapter layer",
+      "assume it is the only capability writing to its own tables"
+    ],
+    "escalation_contact": "capability-owner:composition-workspace"
+  },
+
+  "lifecycle": {
+    "states": [
+      "UNREGISTERED",
+      "REGISTERED",
+      "INITIALIZING",
+      "ACTIVE",
+      "DEGRADED",
+      "DEPRECATING",
+      "RETIRED"
+    ],
+    "current_state": "ACTIVE",
+    "deterministic_transitions": {
+      "UNREGISTERED->REGISTERED": "register() called with valid manifest",
+      "REGISTERED->INITIALIZING": "initialize() called; dependencies resolved",
+      "INITIALIZING->ACTIVE": "startup validation passed, DB reachable, adapters attached",
+      "INITIALIZING->DEGRADED": "startup validation passed with non-fatal adapter failures",
+      "ACTIVE->DEGRADED": "a required dependency becomes unhealthy at runtime",
+      "DEGRADED->ACTIVE": "dependency health restored",
+      "ACTIVE->DEPRECATING": "deprecate() called by host platform",
+      "DEPRECATING->RETIRED": "shutdown() called after deprecation window",
+      "*->RETIRED": "forced retirement via kill switch (emergency only)"
+    }
+  },
+
+  "capability_attachment_interface": {
+    "entrypoint": "app.capability.contracts:CapabilityContract",
+    "attach_method": "attach(host_context: HostContext) -> AttachmentResult",
+    "detach_method": "detach() -> None",
+    "health_method": "health() -> HealthReport",
+    "describe_method": "describe() -> CapabilityManifest"
+  },
+
+  "public_api_contract": {
+    "transport": "HTTP/JSON (FastAPI router), mountable at any prefix",
+    "router_entrypoint": "app.main:capability_router",
+    "resources": [
+      { "path": "/users", "methods": ["GET", "POST"] },
+      { "path": "/documents", "methods": ["GET", "POST"] },
+      { "path": "/documents/upload", "methods": ["POST"] },
+      { "path": "/documents/{id}", "methods": ["GET", "PUT", "DELETE"] },
+      { "path": "/documents/{id}/versions", "methods": ["GET"] },
+      { "path": "/documents/{id}/versions/{version}/restore", "methods": ["POST"] },
+      { "path": "/documents/{id}/comments", "methods": ["GET", "POST"] },
+      { "path": "/documents/comments/{id}/resolve", "methods": ["PATCH"] },
+      { "path": "/tasks", "methods": ["GET", "POST"] },
+      { "path": "/tasks/{id}", "methods": ["GET", "PATCH", "DELETE"] },
+      { "path": "/dashboard/summary", "methods": ["GET"] },
+      { "path": "/dashboard/activity", "methods": ["GET"] },
+      { "path": "/capability/manifest", "methods": ["GET"] },
+      { "path": "/capability/health", "methods": ["GET"] },
+      { "path": "/capability/lifecycle", "methods": ["GET"] },
+      { "path": "/capability/insights", "methods": ["GET"] }
+    ],
+    "event_stream": {
+      "description": "Every state-changing operation emits a structured, replay-safe event through the internal event bus, which is consumed by BHIV adapters (Bucket, Replay, InsightFlow, Runtime Registry, Rajya).",
+      "event_types": [
+        "document_created", "document_updated", "version_restored",
+        "comment_added", "task_created", "task_updated",
+        "task_completed", "document_deleted", "document_uploaded"
+      ]
+    }
+  },
+
+  "internal_extension_points": {
+    "adapter_protocol": "app.adapters.base:CapabilityAdapter",
+    "registered_adapters": [
+      "app.adapters.bucket_adapter:BucketAdapter",
+      "app.adapters.replay_adapter:ReplayAdapter",
+      "app.adapters.insightflow_adapter:InsightFlowAdapter",
+      "app.adapters.runtime_registry_adapter:RuntimeRegistryAdapter",
+      "app.adapters.rajya_adapter:RajyaAdapter"
+    ],
+    "extension_hooks": [
+      "on_before_event_dispatch(event) -> event | None  (mutate or veto)",
+      "on_after_event_dispatch(event, results) -> None (observe)",
+      "register_adapter(adapter: CapabilityAdapter) -> None (attach new consumer at runtime)"
+    ],
+    "identity_delegation_hook": "app.capability.contracts:UserResolver (host platform supplies real identity resolution; capability ships a local fallback)"
+  },
+
+  "capability_registration_structure": {
+    "registry_entrypoint": "app.capability.registry:CapabilityRegistry",
+    "registration_fields": [
+      "module_identifier", "capability_version", "declared_dependencies",
+      "provided_events", "lifecycle_state", "health_endpoint", "attached_at"
+    ]
+  },
+
+  "dependencies": {
+    "runtime": [
+      { "name": "python", "version_constraint": ">=3.10,<4.0" },
+      { "name": "sqlite-or-compatible-rdbms", "version_constraint": ">=3.35" }
+    ],
+    "declared_capability_dependencies": [],
+    "declared_capability_optional_peers": [
+      "bhiv.integration.bucket",
+      "bhiv.integration.replay",
+      "bhiv.integration.insightflow",
+      "bhiv.integration.runtime-registry",
+      "bhiv.integration.rajya"
+    ]
+  },
+
+  "compatibility": {
+    "tantra_runtime_min_version": "1.0.0",
+    "tantra_runtime_max_tested_version": "1.x",
+    "semver_policy": "MAJOR = breaking public_api_contract change; MINOR = additive event types or endpoints; PATCH = internal-only fixes"
+  },
+
+  "maintainers": ["Rhugved"],
+  "license": "internal-use"
+}

@@ -1,0 +1,42 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# --- Virtual environments (never commit these) ---
+venv/
+.venv/
+env/
+ENV/
+
+# --- Environment configuration (never commit real secrets/config) ---
+.env
+.env.*
+!.env.example
+
+# --- Database ---
+*.db
+*.sqlite
+*.sqlite3
+composition_workspace.db
+
+# --- Testing / tooling caches ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# --- Docker ---
+docker/*.log

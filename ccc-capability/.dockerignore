@@ -1,0 +1,17 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.git/
+.gitignore
+*.db
+.env
+.env.*
+!.env.example
+docker/docker-compose.yml
+tests/
+README.md
+ARCHITECTURE.md
+INTEGRATION_GUIDE.md
+CHANGELOG.md

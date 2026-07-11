@@ -1,0 +1,28 @@
+services:
+  composition-workspace:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: bhiv/composition-workspace-capability:2.0.0
+    container_name: composition-workspace-capability
+    ports:
+      - "${CWCC_PORT:-8000}:8000"
+    environment:
+      CWCC_ENVIRONMENT: ${CWCC_ENVIRONMENT:-production}
+      CWCC_DATABASE_URL: ${CWCC_DATABASE_URL:-sqlite:////data/composition_workspace.db}
+      CWCC_LOG_LEVEL: ${CWCC_LOG_LEVEL:-INFO}
+      CWCC_LOG_FORMAT: ${CWCC_LOG_FORMAT:-json}
+      CWCC_HOST_NAME: ${CWCC_HOST_NAME:-docker-compose}
+      CWCC_TANTRA_RUNTIME_VERSION: ${CWCC_TANTRA_RUNTIME_VERSION:-1.0.0}
+    volumes:
+      - workspace-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/capability/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  workspace-data:
